@@ -2,6 +2,7 @@ from os.path import join
 import sys
 
 import numpy as np
+from multiprocessing.pool import Pool
 
 
 def load_data(load_dir, bid):
