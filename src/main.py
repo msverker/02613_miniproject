@@ -1,8 +1,6 @@
 from os.path import join
-import sys
 
 import numpy as np
-from numba import jit, cuda
 from multiprocessing.pool import Pool
 
 
@@ -25,7 +23,10 @@ N_PROC_LIST = [1, 2, 3, 4, 5, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32]
 # ---------------------------------------------------------------------------- #
 
 def load_data(load_dir, bid):
-    u = np.zeros((SIZE + 2, SIZE + 2))
+    # Personal opinion: SIZE + 2 is blasphemous - it's not really used anywhere and 
+    #all other code just indexes the extra boundaries it out
+    #but it's the original code so whatevs ¯\_(ツ)_/¯
+    u = np.zeros((SIZE + 2, SIZE + 2)) 
     u[1:-1, 1:-1] = np.load(join(load_dir, f"{bid}_domain.npy"))
     interior_mask = np.load(join(load_dir, f"{bid}_interior.npy"))
     return u, interior_mask
@@ -71,7 +72,7 @@ if __name__ == '__main__':
     """
     Jacobi exercise numbers:
         7: NUMBA JIT on CPU
-        8: CUDA JIT
+        8: CUDA JIT (cannot be run with multiprocessing)
         9: Cupy
     
     Multiprocessing exercise numbers:
@@ -96,6 +97,7 @@ if __name__ == '__main__':
     if args.multi_process_exercise == 5:
         from exercise_specific_fn.ex5 import jacobi_multiple 
     
+    # Overwrite default jacobi function
     match args.jacobi_exercise:
         case 7:
             from exercise_specific_fn.ex7 import jacobi
@@ -107,7 +109,7 @@ if __name__ == '__main__':
             # Default simulate.py behavior
             pass 
         case _:
-            raise NotImplementedError('Invalid exercise number. Must be between 5 and 9.')
+            raise NotImplementedError('Invalid exercise number. Must be between 7 and 9.')
 
     
     # Start the timer - RUN FOREST RUN
@@ -133,7 +135,7 @@ if __name__ == '__main__':
             u = jacobi(u0, interior_mask, MAX_ITER, ABS_TOL)
             all_u[i] = u
         
-        print(f"Serial Jaxobi Ex {args.jacobi_exercise} - time taken: {time.time() - time_start:.2f} seconds")
+        print(f"Serial Jacobi Ex {args.jacobi_exercise} - time taken: {time.time() - time_start:.2f} seconds")
     else:
         # Run in parallel using multiprocessing
         serial_times = []
@@ -144,42 +146,51 @@ if __name__ == '__main__':
             proc_serial_time_start = time.time()
             
             pool = Pool(n_proc)
-            if args.multi_process_exercise == 5:
-                # Manually split the tasks to be the same as the number of processes making static scheduling
-                all_u0_split = np.array_split(all_u0, n_proc) 
-                all_interior_mask_split = np.array_split(all_interior_mask, n_proc)
-                
-                parallel_time_start = time.time()
-                
-                results_async = [
-                    pool.apply_async(jacobi_multiple, (all_u0_split[i], all_interior_mask_split[i], MAX_ITER, jacobi, ABS_TOL, ))
-                    for i in range(n_proc)
+            match args.multi_process_exercise:
+                case 5:
+                    # Manually split the tasks to be the same as the number of processes making static scheduling
+                    all_u0_split = np.array_split(all_u0, n_proc) 
+                    all_interior_mask_split = np.array_split(all_interior_mask, n_proc)
+                    
+                    parallel_time_start = time.time()
+                    
+                    results_async = [
+                        pool.apply_async(jacobi_multiple, (all_u0_split[i], all_interior_mask_split[i], MAX_ITER, jacobi, ABS_TOL, ))
+                        for i in range(n_proc)
+                        ]
+                    
+                    results = [x 
+                               for res in (r.get() 
+                                           for r in results_async) 
+                               for x in res
+                               ]
+                case 6:
+                    # Dynamic scheduling goes brrrrrrrrr
+                    parallel_time_start = time.time()
+                    
+                    results_async = [
+                        pool.apply_async(jacobi, (u0, mask, MAX_ITER, ABS_TOL))
+                        for u0, mask in zip(all_u0, all_interior_mask)
                     ]
-            elif args.multi_process_exercise == 6:
-                # TODO: Needs debugging, didn't have time to finish this will do soon
-                
-                # Dynamic scheduling goes brrrrrrrrr
-                parallel_time_start = time.time()
-                
-                results_async = [
-                    pool.apply_async(jacobi, (u0, mask, MAX_ITER, ABS_TOL))
-                    for u0, mask in zip(all_u0, all_interior_mask)
-                ]
-            results_split = [r.get() for r in results_async]
+                    
+                    results = [r.get() for r in results_async]
+                case _:
+                    raise NotImplementedError('Invalid multiprocess exercise number. Must be 5 or 6.')
             
             parallel_times.append(time.time() - parallel_time_start)
-            all_u = np.array([x for res in results_split for x in res])
+            
+            all_u = np.array(results)
             
             serial_times.append(time.time() - proc_serial_time_start - parallel_times[-1] + serial_time_outside_procs)
         
         # TODO: Potentially change this to save to a file instead
         print(f"Scheduling tactic {args.multi_process_exercise} - Jacobi tactic {args.jacobi_exercise}:")
         print(f"# of processors: {N_PROC_LIST}")
-        print(f"Serial time for process: {serial_times}")
-        print(f"Parallel time for process: {parallel_times}")
-        print(f"Total time for process: {np.array(parallel_times) + np.array(serial_times)}")
+        print(f"Serial times (s): {serial_times}")
+        print(f"Parallel times (s): {parallel_times}")
+        print(f"Total times (s): {np.array(parallel_times) + np.array(serial_times)}")
                     
-    # Print summary statistics in CSV format (NOTE: For multiprocessing it just prints the last one)
+    # Print summary statistics in CSV format (NOTE: For multiprocessing it just prints the last all_u)
     stat_keys = ['mean_temp', 'std_temp', 'pct_above_18', 'pct_below_15']
     print('building_id, ' + ', '.join(stat_keys))  # CSV header
     for bid, u, interior_mask in zip(building_ids, all_u, all_interior_mask):
