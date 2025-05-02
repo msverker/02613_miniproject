@@ -11,7 +11,7 @@ def jacobi_kernel(u, u_new, mask):
         u_new[i_mask, j_mask] = 0.25 * (u[i_mask, j_mask - 1] + u[i_mask, j_mask + 1] + u[i_mask - 1, j_mask] + u[i_mask + 1, j_mask])
 
 
-def jacobi_cuda(u, interior_mask, num_iter):
+def jacobi(u, interior_mask, num_iter, _):
     u_cutted = np.copy(u[1:-1, 1:-1]) # Cut off the boundary
     mask_idxs = np.stack(np.where(interior_mask), axis=-1).astype(np.int32)
     print(mask_idxs)
