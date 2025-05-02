@@ -29,29 +29,29 @@ pct_below_15_array = df[" pct_below_15"]
 number_of_buildings_50_pct_below_15 = sum([x >= 50 for x in pct_below_15_array])
 print(f"Number of buildings 50% below 15: {number_of_buildings_50_pct_below_15}")
 
-""" Copied from: cat task12_24858166_*.err | grep "real"
-real    3m2.003s
-real    3m7.784s
-real    2m55.019s
-real    3m1.643s
-real    3m5.057s
-real    3m7.211s
-real    3m3.431s
-real    3m2.921s
-real    3m6.046s
-real    3m13.700s
+""" Copied from: cat task12_24858166_*.err | grep real | awk '{gsub(/real\s+|s/, ""); split($1, time_parts, "m"); minutes = time_parts[1]; seconds_ms = time_parts[2]; split(seconds_ms, ms_parts, "."); seconds = ms_parts[1]; milliseconds = ms_parts[2]; total_seconds = (minutes * 60) + seconds + (milliseconds / 1000); printf "%.3f,\n", total_seconds}'
+182.003,
+187.784,
+175.019,
+181.643,
+185.057,
+187.211,
+183.431,
+182.921,
+186.046,
+193.700,
 """
 
 times = np.array([
-    3 * 60 + 2, 
-    3 * 60 + 7.7, 
-    2 * 60 + 55,
-    3 * 60 + 1.6,
-    3 * 60 + 5,
-    3 * 60 + 7.2,
-    3 * 60 + 3.4,
-    3 * 60 + 2.9,
-    3 * 60 + 6,
-    3 * 60 + 13.7
+    182.003,
+    187.784,
+    175.019,
+    181.643,
+    185.057,
+    187.211,
+    183.431,
+    182.921,
+    186.046,
+    193.700,
 ])
 print(f"Total time: {np.sum(times)} s, {np.sum(times) / 60} min")
