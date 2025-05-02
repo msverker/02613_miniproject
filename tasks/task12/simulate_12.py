@@ -57,11 +57,18 @@ if __name__ == '__main__':
     with open(join(LOAD_DIR, 'building_ids.txt'), 'r') as f:
         building_ids = f.read().splitlines()
 
-    if len(sys.argv) < 2:
-        N = 1
-    else:
-        N = int(sys.argv[1])
-    building_ids = building_ids[:N]
+    part = int(sys.argv[1]) - 1 # job names cant contain 0 so we subtract 1 :))
+    number_of_parts = int(sys.argv[2])
+
+    building_ids_split = np.array_split(building_ids, number_of_parts)
+    building_ids = list(building_ids_split[part])
+    N = len(building_ids)
+
+    # if len(sys.argv) < 2:
+    #     N = 1
+    # else:
+    #     N = int(sys.argv[1])
+    # building_ids = building_ids[:N]
 
     # Load floor plans
     all_u0 = np.empty((N, 514, 514))
@@ -74,8 +81,6 @@ if __name__ == '__main__':
     # Run jacobi iterations for each floor plan
     MAX_ITER = 10_000
     ABS_TOL = 1e-4
-    TOTAL = 4571
-    part = int(sys.argv[2])
 
     all_u = np.empty_like(all_u0)
     for i, (u0, interior_mask) in enumerate(zip(all_u0, all_interior_mask)):
