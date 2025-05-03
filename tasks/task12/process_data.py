@@ -6,7 +6,7 @@ import sys
 ID = sys.argv[1]
 df_list = []
 for i in range(1, 10+1):
-    df = pd.read_csv(f"task12_{ID}_{2}.out")
+    df = pd.read_csv(f"task12_{ID}_{i}.out")
     df_list.append(df)
 
 df = pd.concat(df_list, ignore_index=True, sort=False)
