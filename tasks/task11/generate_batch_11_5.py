@@ -10,8 +10,8 @@ def content(n_proc):
 #BSUB -R "rusage[mem=2GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -n {n_proc}
-#BSUB -o task11_5_%J_%I.out
-#BSUB -e task11_5_%J_%I.err
+#BSUB -o batch-output/task11_5_%J_%I.out
+#BSUB -e batch-output/task11_5_%J_%I.err
 #BSUB -u s214753@dtu.dk
 #BSUB -B
 #BSUB -N
