@@ -14,4 +14,5 @@
 
 source /dtu/projects/02613_2024/conda/conda_init.sh
 conda activate 02613
-# Some command...
+
+kernprof -l -v simulate.py 1

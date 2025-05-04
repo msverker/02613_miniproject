@@ -1,7 +1,7 @@
 #!/bin/bash
 #BSUB -J task7
 #BSUB -q hpc
-#BSUB -W 10
+#BSUB -W 00:30
 #BSUB -R "rusage[mem=1GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -n 1
@@ -14,4 +14,4 @@
 
 source /dtu/projects/02613_2024/conda/conda_init.sh
 conda activate 02613
-time python simulate_7.py 15
+time python simulate_7.py 20

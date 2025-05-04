@@ -1,6 +1,8 @@
 from os.path import join
 import sys
-import time
+import matplotlib.pyplot as plt
+from time import time
+from scipy.optimize import curve_fit
 
 import numpy as np
 
@@ -52,12 +54,47 @@ def summary_stats(u, interior_mask):
         'pct_below_15': pct_below_15,
     }
 
+def exp_saturating(x, L, k, x0):
+    return L * (1 - np.exp(-k * (x - x0)))
+
+def plot_speedup(n_proc, time_1, times):
+    speed_ups = []
+    for time in times:
+        speed_ups.append(time_1 / time)
+    speedup = np.array(speed_ups)
+    
+    # Plot the measured speedup
+    plt.plot(n_proc, speedup, 'o', label='Measured Speedup')
+
+    # Fit the saturating exponential curve
+    p0 = [max(speedup), 0.1, 0]  # Initial guess: [L, k, x0]
+    bounds = ([0, 0, -np.inf], [np.inf, np.inf, np.inf])  # Ensure k > 0
+    popt, _ = curve_fit(exp_saturating, n_proc, speedup, p0=p0, bounds=bounds, maxfev=10000)
+    
+    # Predict using the fitted function
+    n_proc_fit = np.linspace(min(n_proc), max(n_proc), 200)
+    speedup_fit = exp_saturating(n_proc_fit, *popt)
+    
+    # Plot the fit
+    plt.plot(n_proc_fit, speedup_fit, 'r--', label=f'Exponential Fit')
+    
+    plt.xticks(n_proc)
+    plt.xlabel('Number of processes')
+    plt.ylabel('Speedup')
+    plt.title('Speedup of wall heat simulation script')
+    plt.grid()
+    plt.legend()
+    plt.savefig('/zhome/09/8/169747/02613/mini_project/task5/speedup.png')
+    plt.close()
+
 
 if __name__ == '__main__':
-    time_list = []
+    time_1 = None  # Initialize time_1 to None
+    times = []  # List to store wall times for each n_proc
+
     for n_proc in n_proc_list:
-        start_time = time.time()
-        
+        start_time = time()  # Start timing
+
         # Load data
         LOAD_DIR = '/dtu/projects/02613_2025/data/modified_swiss_dwellings/'
         with open(join(LOAD_DIR, 'building_ids.txt'), 'r') as f:
@@ -86,27 +123,34 @@ if __name__ == '__main__':
         #     u = jacobi(u0, interior_mask, MAX_ITER, ABS_TOL)
         #     all_u[i] = u
 
-        # Splits in first coordinate
-        all_u0_split = np.array_split(all_u0, n_proc) 
+        # Split data in the first coordinate
+        all_u0_split = np.array_split(all_u0, n_proc)
         all_interior_mask_split = np.array_split(all_interior_mask, n_proc)
-        
-        pool = Pool(n_proc)
-        results_async = [
-            pool.apply_async(jacobi_multiple, (all_u0_split[i], all_interior_mask_split[i], MAX_ITER, ABS_TOL, ))
-            for i in range(n_proc)
-        ]
-        results_split = [r.get() for r in results_async]
+
+        # Parallel processing
+        with Pool(n_proc) as pool:
+            results_async = [
+                pool.apply_async(jacobi_multiple, (all_u0_split[i], all_interior_mask_split[i], MAX_ITER, ABS_TOL))
+                for i in range(n_proc)
+            ]
+            results_split = [r.get() for r in results_async]
+
+        # Combine results
         results = [x for res in results_split for x in res]
         all_u = np.array(results)
-
+        
         # Print summary statistics in CSV format
         stat_keys = ['mean_temp', 'std_temp', 'pct_above_18', 'pct_below_15']
         print('building_id, ' + ', '.join(stat_keys))  # CSV header
         for bid, u, interior_mask in zip(building_ids, all_u, all_interior_mask):
             stats = summary_stats(u, interior_mask)
             print(f"{bid},", ", ".join(str(stats[k]) for k in stat_keys))
-    
-        end_time = time.time()
-        time_list.append(end_time - start_time)
 
-    print(time_list)
+        wall_time = time() - start_time
+        times.append(wall_time)
+
+        if n_proc == 1:
+            time_1 = wall_time
+
+    # Plot speedup
+    plot_speedup(n_proc_list, time_1, np.array(times))
