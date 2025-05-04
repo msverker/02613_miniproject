@@ -6,11 +6,11 @@ import sys
 ID = sys.argv[1]
 df_list = []
 for i in range(1, 10+1):
-    df = pd.read_csv(f"task12_{ID}_{i}.out")
+    df = pd.read_csv(f"task12_{ID}_{i}.out", sep=', ', engine='python')
     df_list.append(df)
 
 df = pd.concat(df_list, ignore_index=True, sort=False)
-mean_temps = df[" mean_temp"] # Gotta love spaces...
+mean_temps = df["mean_temp"] # Gotta love spaces...
 
 plt.figure()
 plt.hist(mean_temps)
@@ -18,14 +18,14 @@ plt.xlabel("Temperatures")
 plt.savefig("mean_temp_histogram.png")
 print(f"Average mean temperature: {np.mean(mean_temps)}")
 
-std_temps = df[" std_temp"]
+std_temps = df["std_temp"]
 print(f"Average std temperature: {np.mean(std_temps)}")
 
-pct_above_18_array = df[" pct_above_18"]
+pct_above_18_array = df["pct_above_18"]
 number_of_buildings_50_pct_above_18 = sum([x >= 50 for x in pct_above_18_array])
 print(f"Number of buildings 50% above 18: {number_of_buildings_50_pct_above_18}")
 
-pct_below_15_array = df[" pct_below_15"]
+pct_below_15_array = df["pct_below_15"]
 number_of_buildings_50_pct_below_15 = sum([x >= 50 for x in pct_below_15_array])
 print(f"Number of buildings 50% below 15: {number_of_buildings_50_pct_below_15}")
 
