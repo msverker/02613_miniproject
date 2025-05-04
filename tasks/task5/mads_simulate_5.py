@@ -152,5 +152,7 @@ if __name__ == '__main__':
         if n_proc == 1:
             time_1 = wall_time
 
+    print(times)
+
     # Plot speedup
     plot_speedup(n_proc_list, time_1, np.array(times))

@@ -2,7 +2,7 @@
 
 #BSUB -q hpc
 #BSUB -J generate_batch_5
-#BSUB -n 4
+#BSUB -n 32
 #BSUB -M 5GB
 #BSUB -u s216143@dtu.dk
 #BSUB -N 
